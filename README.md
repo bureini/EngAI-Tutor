@@ -1,20 +1,40 @@
-# English AI Tutor — Step 4E: Pronunciation & Speaking Analysis
+# English AI Tutor — Step 4F: Mobile App Preparation
 
-Adds a dedicated pronunciation practice mode: hear a target sentence, repeat it, compare the transcript with the target, and receive a cautious AI clarity/pronunciation estimate plus one practice tip.
+Step 4F prepares the speaking-first English AI Tutor for real mobile packaging.
 
-Pronunciation is explicitly an estimate; browser speech-to-text cannot reliably provide exact phoneme-level or clinical pronunciation measurement.
+Included:
+- Responsive mobile viewport
+- Safe-area support for modern phones
+- Touch-friendly controls
+- PWA manifest
+- Service worker/offline app shell
+- 192px/512px app icons
+- Capacitor configuration
+- Android/iOS packaging instructions
+- Existing Steps 4A–4E functionality preserved
 
-## Setup
+## Architecture
+
+Mobile app UI → HTTPS API → AI model
+
+The API key stays on the server.
+
+## Web
+
 ```bash
 npm install
-```
-Create `.env` with:
-```text
-OPENAI_API_KEY=your_real_key_here
-OPENAI_MODEL=gpt-5.5
-```
-Then run:
-```bash
 npm start
 ```
-Never put the API key in `index.html`.
+
+## Mobile packaging
+
+```bash
+npm install
+npx cap add android
+npx cap add ios
+npx cap sync
+```
+
+Then open the native project with Android Studio or Xcode.
+
+See `mobile-build.md` for details.

@@ -1,0 +1,8 @@
+{
+  "appId": "com.englishaitutor.app",
+  "appName": "English AI Tutor",
+  "webDir": ".",
+  "server": {
+    "androidScheme": "https"
+  }
+}

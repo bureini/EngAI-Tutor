@@ -38,6 +38,17 @@ h2.main-title{font-size:30px;margin:8px 0 5px}.description{max-width:560px;color
 .progress-history-item{padding:10px 0;border-top:1px solid #e5e7eb;font-size:13px}
 .progress-history-item:first-child{border-top:0}
 </style>
+<link rel="manifest" href="/manifest.webmanifest">
+<style>
+html,body{overscroll-behavior:none}
+body{padding-bottom:env(safe-area-inset-bottom)}
+button,select{touch-action:manipulation}
+@media(max-width:700px){
+  body{min-height:100dvh}
+  main{padding-left:max(12px,env(safe-area-inset-left));padding-right:max(12px,env(safe-area-inset-right))}
+  .control{min-height:44px}
+}
+</style>
 </head>
 <body>
 <div class="app">
@@ -436,6 +447,9 @@ function resetProgress(){
 
 selectLesson("introducing-yourself");
 document.querySelectorAll(".level button").forEach(b=>b.onclick=()=>{document.querySelectorAll(".level button").forEach(x=>x.classList.remove("active"));b.classList.add("active")});
+</script>
+<script>
+if("serviceWorker" in navigator){window.addEventListener("load",()=>navigator.serviceWorker.register("/sw.js").catch(()=>{}));}
 </script>
 </body>
 </html>
