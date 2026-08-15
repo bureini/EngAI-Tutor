@@ -1,22 +1,23 @@
-# English AI Tutor — Step 2
+# English AI Tutor — Step 3: Voice Tutor
 
-A speaking-first English tutor. The browser handles microphone speech recognition and the Node.js backend sends the transcript to an AI model for feedback.
+Step 3 keeps the approved speaking-only UI and adds spoken AI tutor responses.
 
-## Files
+## Flow
 
-- `index.html` — speaking-only UI
-- `server.js` — secure AI analysis endpoint
-- `package.json` — Node.js dependencies and start command
-- `.env.example` — environment-variable template
-- `.gitignore` — prevents `.env` and dependencies from being committed
+1. Learner taps the microphone.
+2. Browser speech recognition transcribes the learner.
+3. Server sends the transcript to the AI model.
+4. AI returns scores, feedback, a correction, and a conversational voice response.
+5. Browser speaks the tutor response aloud.
+6. Learner can replay the feedback or continue to the next speaking question.
 
-## Local setup
+## Setup
 
 ```bash
 npm install
 ```
 
-Create `.env` from `.env.example` and add your server-side API key:
+Create `.env`:
 
 ```text
 OPENAI_API_KEY=your_real_key_here
@@ -29,10 +30,8 @@ Then:
 npm start
 ```
 
-Open the address shown by the server and allow microphone access.
+Open the local server URL and allow microphone access.
 
-## Important
+The API key stays on the server. It is never placed in the HTML.
 
-Do not put the API key into `index.html`. The browser calls `/api/analyze`; only the server talks to the AI API.
-
-The speech-recognition feature depends on browser support and microphone permission.
+Speech recognition and browser text-to-speech depend on browser support and permissions.
