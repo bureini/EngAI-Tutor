@@ -111,6 +111,31 @@ Evaluate the learner carefully and then continue the conversation.`;
  }
 });
 
+
+app.post("/api/pronunciation",async(req,res)=>{
+ try{
+  const {target,spoken,confidence=null,level="Beginner"}=req.body||{};
+  if(!target||!spoken)return res.status(400).json({error:"Missing pronunciation text."});
+  if(!process.env.OPENAI_API_KEY)return res.status(503).json({error:"OPENAI_API_KEY is not configured."});
+  const input=`Learner level: ${level}
+Target sentence: ${target}
+Speech recognition transcript: ${spoken}
+Browser confidence: ${confidence==null?"unavailable":confidence}
+
+Return ONLY JSON:
+{"score":number,"clarity":number,"feedbackTitle":"short title","feedback":"short encouraging explanation","focus":"one practical pronunciation focus"}
+Scores 0-100. Be cautious: transcript evidence cannot prove exact phoneme pronunciation.`;
+  const response=await client.responses.create({model:process.env.OPENAI_MODEL||"gpt-5.5",instructions:"You are a careful English pronunciation coach. Never claim precise phonetic evidence that is unavailable.",input});
+  const result=parseJson(response.output_text);
+  result.score=Math.max(0,Math.min(100,Math.round(Number(result.score)||0)));
+  result.clarity=Math.max(0,Math.min(100,Math.round(Number(result.clarity)||0)));
+  result.feedbackTitle=String(result.feedbackTitle||"Good practice");
+  result.feedback=String(result.feedback||"Keep repeating the sentence slowly and clearly.");
+  result.focus=String(result.focus||"Focus on clear word endings and natural rhythm.");
+  res.json(result);
+ }catch(error){console.error("Pronunciation error:",error?.message||error);res.status(500).json({error:"Pronunciation analysis unavailable."})}
+});
+
 app.post("/api/next-question",async(req,res)=>{
  try{
   const {topic="Daily Life",lesson="",level="Beginner",currentQuestion="",history=[],turn=1}=req.body||{};

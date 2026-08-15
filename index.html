@@ -104,7 +104,7 @@ h2.main-title{font-size:30px;margin:8px 0 5px}.description{max-width:560px;color
 </div>
 <div class="controls">
 <button class="control" onclick="speakQuestion()">🔊 Hear Question</button>
-<button class="control primary" onclick="nextQuestion()">Next Question →</button><button class="control" onclick="completeLesson()">✓ Complete Lesson</button><button class="control" onclick="toggleProgress()">📈 Progress</button>
+<button class="control primary" onclick="nextQuestion()">Next Question →</button><button class="control" onclick="completeLesson()">✓ Complete Lesson</button><button class="control" onclick="toggleProgress()">📈 Progress</button><button class="control" onclick="togglePronunciation()">🗣️ Pronunciation</button>
 </div>
 <div class="controls" style="margin-top:9px">
 <button class="control" id="replayBtn" onclick="replayTutor()" style="display:none">🔁 Hear Feedback</button>
@@ -129,7 +129,22 @@ h2.main-title{font-size:30px;margin:8px 0 5px}.description{max-width:560px;color
   </div>
   <div id="progressAdvice" class="correction" style="display:none;background:#eef2ff;border-color:#c7d2fe"></div>
 </section>
-</section>
+<section id="pronunciationPanel" style="display:none;width:min(650px,100%);margin-top:18px;text-align:left;background:#fff;border:1px solid #e5e7eb;border-radius:18px;padding:18px">
+<div class="feedback-title">Pronunciation Practice</div>
+<div style="font-size:18px;font-weight:800;margin:5px 0">Repeat the sentence aloud</div>
+<div id="pronTarget" style="padding:14px;background:#f8faff;border:1px solid #dbe3ff;border-radius:14px;font-size:17px;font-weight:700;line-height:1.4"></div>
+<div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:12px">
+<button class="control" onclick="speakPronunciationTarget()">🔊 Hear</button>
+<button class="control primary" onclick="startPronunciationPractice()">🎙️ Repeat</button>
+<button class="control" onclick="newPronunciationTarget()">↻ New Sentence</button></div>
+<div id="pronStatus" style="font-size:13px;color:#6b7280;margin-top:10px;min-height:20px"></div>
+<div id="pronResult" style="display:none;margin-top:12px"><div class="feedback-grid">
+<div class="metric"><b id="pronScore">--</b><span>Estimated Score</span></div>
+<div class="metric"><b id="pronClarity">--</b><span>Clarity</span></div>
+<div class="metric"><b id="pronMatch">--</b><span>Word Match</span></div></div>
+<div class="correction" id="pronFeedback" style="margin-top:12px"></div></div>
+<div style="font-size:10px;color:#9ca3af;margin-top:10px">Pronunciation is an estimate from speech recognition/transcription and browser signals, not a clinical phonetic assessment.</div>
+</section></section>
 </main>
 </div>
 <script>
@@ -274,6 +289,29 @@ async function continueConversation(){
  }
 }
 
+
+
+const PRON_TARGETS=[
+"I would like to improve my English speaking skills.",
+"Could you please tell me how I can get there?",
+"I usually practice English for a few minutes every day.",
+"I enjoy talking with people and learning new things.",
+"Yesterday I went to the market and bought some food.",
+"I am looking forward to speaking English more confidently."
+];
+let pronTargetIndex=0;
+function togglePronunciation(){const p=document.getElementById("pronunciationPanel");p.style.display=p.style.display==="none"?"block":"none";if(p.style.display==="block")newPronunciationTarget()}
+function newPronunciationTarget(){pronTargetIndex=(pronTargetIndex+1)%PRON_TARGETS.length;document.getElementById("pronTarget").textContent=PRON_TARGETS[pronTargetIndex];document.getElementById("pronResult").style.display="none";document.getElementById("pronStatus").textContent="Listen first, then repeat the sentence."}
+function speakPronunciationTarget(){speakText(document.getElementById("pronTarget").textContent,()=>document.getElementById("pronStatus").textContent="Now repeat the sentence.")}
+function similarityScore(a,b){const n=s=>s.toLowerCase().replace(/[^\w\s']/g,"").trim().split(/\s+/).filter(Boolean),A=n(a),B=n(b),S=new Set(B);if(!A.length||!B.length)return 0;return Math.round(A.filter(w=>S.has(w)).length/Math.max(A.length,B.length)*100)}
+async function startPronunciationPractice(){
+const R=window.SpeechRecognition||window.webkitSpeechRecognition;if(!R){document.getElementById("pronStatus").textContent="Speech recognition is not supported in this browser.";return}
+speechSynthesis?.cancel();const target=document.getElementById("pronTarget").textContent,r=new R();r.lang="en-US";r.interimResults=false;r.maxAlternatives=1;
+document.getElementById("pronStatus").textContent="🎙️ Listening… repeat the sentence.";
+r.onresult=async e=>{const spoken=e.results[0][0].transcript,confidence=e.results[0][0].confidence,match=similarityScore(spoken,target);document.getElementById("pronStatus").textContent="Analyzing your repetition…";
+try{const x=await fetch("/api/pronunciation",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({target,spoken,confidence,level:document.querySelector(".level button.active")?.textContent||"Beginner"})});if(!x.ok)throw 0;const a=await x.json();document.getElementById("pronScore").textContent=a.score;document.getElementById("pronClarity").textContent=a.clarity;document.getElementById("pronMatch").textContent=match+"%";document.getElementById("pronFeedback").innerHTML="<b>"+a.feedbackTitle+"</b><br>"+a.feedback+(a.focus?("<div style='margin-top:8px'><b>Focus:</b> "+a.focus+"</div>"):"");document.getElementById("pronResult").style.display="block";document.getElementById("pronStatus").textContent="Practice complete. Try again or choose a new sentence."}catch{document.getElementById("pronStatus").textContent="Pronunciation analysis is unavailable. Check the server and API key."}};
+r.onerror=e=>document.getElementById("pronStatus").textContent=e.error==="not-allowed"?"Microphone permission was denied.":"I couldn't hear the repetition clearly.";r.start()
+}
 
 const LESSONS={
  "introducing-yourself":{title:"Introducing Yourself",level:"Beginner",topic:"Daily Life",description:"Introduce yourself, talk about where you are from, and share simple information about yourself.",questions:["What is your name and where are you from?","What do you like to do in your free time?","Tell me one interesting thing about yourself."]},

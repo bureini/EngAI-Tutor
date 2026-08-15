@@ -1,43 +1,20 @@
-# English AI Tutor — Step 4D: Structured Lessons
+# English AI Tutor — Step 4E: Pronunciation & Speaking Analysis
 
-Step 4D turns the speaking tutor into a structured English learning course.
+Adds a dedicated pronunciation practice mode: hear a target sentence, repeat it, compare the transcript with the target, and receive a cautious AI clarity/pronunciation estimate plus one practice tip.
 
-## Included lessons
-
-1. Introducing Yourself — Beginner
-2. Daily Conversation — Beginner
-3. Family & Friends — Beginner
-4. Work & School — Elementary
-5. Shopping — Elementary
-6. Travel — Elementary
-7. Food & Restaurants — Elementary
-8. Health & Wellbeing — Intermediate
-9. Job Interview — Advanced
-10. Real-life Conversation — Advanced
-
-Each lesson provides a focused topic, recommended level, starter questions, dynamic AI follow-ups, progress tracking, and a completion action.
+Pronunciation is explicitly an estimate; browser speech-to-text cannot reliably provide exact phoneme-level or clinical pronunciation measurement.
 
 ## Setup
-
 ```bash
 npm install
 ```
-
-Create `.env`:
-
+Create `.env` with:
 ```text
 OPENAI_API_KEY=your_real_key_here
 OPENAI_MODEL=gpt-5.5
 ```
-
-Run:
-
+Then run:
 ```bash
 npm start
 ```
-
-Open the server URL and allow microphone access.
-
-## Notes
-
-Lesson completion and learning progress are stored locally in the browser for this prototype. The AI API key stays on the server.
+Never put the API key in `index.html`.
