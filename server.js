@@ -11,45 +11,40 @@ app.use(express.static("."));
 if(!process.env.OPENAI_API_KEY) console.warn("WARNING: OPENAI_API_KEY is not configured.");
 const client=new OpenAI({apiKey:process.env.OPENAI_API_KEY});
 
-const systemPrompt=`
-You are a warm, patient English speaking tutor.
-Your job is to hold a natural conversation with an English learner.
-Adapt to the learner's level and the current topic.
-Do not behave like a chatbot customer-service agent. Speak like a supportive teacher.
-
-For every learner answer, evaluate:
-- overall speaking quality
-- fluency
-- grammar
-- vocabulary
-
-Then give concise written feedback, an optional natural correction, and a short spoken response that acknowledges what the learner said and asks a relevant follow-up question.
+const evaluationPrompt=`
+You are an expert English speaking tutor and language coach.
+Evaluate the learner's latest spoken English answer while preserving a natural conversation.
 
 Return ONLY valid JSON:
 {
- "overall": number,
- "fluency": number,
- "grammar": number,
- "vocabulary": number,
- "feedback": "short written feedback",
- "correction": "natural corrected version or empty string",
- "voiceResponse": "1-3 short spoken sentences, ending with a relevant follow-up question"
+  "overall": number,
+  "fluency": number,
+  "grammar": number,
+  "vocabulary": number,
+  "sentenceStructure": number,
+  "pronunciation": number,
+  "feedback": "short encouraging feedback",
+  "correction": "natural corrected version or empty string",
+  "mistakes": ["specific issue 1", "specific issue 2"],
+  "advice": "one practical practice tip",
+  "voiceResponse": "1-3 natural spoken sentences that acknowledge the answer and ask a relevant follow-up question"
 }
 
-Scores are integers from 0 to 100.
-Do not over-penalize beginners.
-Never criticize the learner personally.
-Do not repeat the exact same question if a relevant follow-up is possible.
+All scores must be integers from 0 to 100.
+Adapt the scoring and language to the learner's level.
+Do not over-penalize beginners or short answers.
+Only list meaningful mistakes. If there are no important mistakes, return an empty mistakes array.
+Do not invent pronunciation errors that cannot be supported by the available speech/transcription evidence.
+For pronunciation, use a cautious estimated score based on speech-recognition confidence or clarity signals supplied by the application. It must not be presented as a clinical or phonetic measurement.
+Do not criticize the learner personally.
+Keep voiceResponse conversational and concise.
 `;
 
 const questionPrompt=`
 Create the next natural follow-up question for an English learner.
-Use the learner's latest answers and the topic.
-The question should connect directly to what the learner just said.
-Keep it suitable for the learner's level.
-Do not ask about sensitive personal information.
-Return ONLY valid JSON:
-{"question":"one natural spoken question"}
+Use the learner's latest answer, topic, level, and conversation history.
+The question should connect directly to what the learner said.
+Return ONLY valid JSON: {"question":"one natural spoken question"}
 `;
 
 function parseJson(text){
@@ -66,36 +61,52 @@ function historyText(history){
 
 app.post("/api/conversation",async(req,res)=>{
  try{
-  const {answer,question,level="Beginner",topic="Daily Life",turn=1,history=[]}=req.body||{};
+  const {answer,question,level="Beginner",topic="Daily Life",turn=1,history=[],speechConfidence=null}=req.body||{};
   if(!answer||typeof answer!=="string")return res.status(400).json({error:"Missing spoken answer."});
   if(!process.env.OPENAI_API_KEY)return res.status(503).json({error:"OPENAI_API_KEY is not configured."});
 
+  const confidenceLine=speechConfidence==null?"Speech confidence: unavailable":`Speech recognition confidence: ${Number(speechConfidence).toFixed(2)}`;
   const input=`Learner level: ${level}
 Topic: ${topic}
 Conversation turn: ${turn}
 Current tutor question: ${question||""}
+${confidenceLine}
+
 Recent conversation:
 ${historyText(history)}
 
 Latest learner answer:
 ${answer}
 
-Analyze the latest answer and continue the conversation naturally.`;
+Evaluate the learner carefully and then continue the conversation.`;
 
   const response=await client.responses.create({
    model:process.env.OPENAI_MODEL||"gpt-5.5",
-   instructions:systemPrompt,
+   instructions:evaluationPrompt,
    input
   });
   const result=parseJson(response.output_text);
-  for(const k of ["overall","fluency","grammar","vocabulary"])result[k]=clamp(result[k]);
+
+  for(const k of ["overall","fluency","grammar","vocabulary","sentenceStructure","pronunciation"])
+    result[k]=clamp(result[k]);
+
+  // If browser confidence is available, blend a small amount into pronunciation rather than
+  // pretending the transcript alone proves pronunciation accuracy.
+  if(Number.isFinite(Number(speechConfidence))){
+    const c=Math.max(0,Math.min(1,Number(speechConfidence)));
+    const confidenceScore=Math.round(c*100);
+    result.pronunciation=clamp(Math.round(result.pronunciation*0.75+confidenceScore*0.25));
+  }
+
   result.feedback=String(result.feedback||"Good effort. Keep speaking.");
   result.correction=String(result.correction||"");
+  result.advice=String(result.advice||"Keep practicing complete sentences.");
   result.voiceResponse=String(result.voiceResponse||result.feedback);
+  result.mistakes=Array.isArray(result.mistakes)?result.mistakes.map(String).slice(0,4):[];
   res.json(result);
  }catch(error){
-  console.error("Conversation error:",error?.message||error);
-  res.status(500).json({error:"AI conversation unavailable."});
+  console.error("Evaluation error:",error?.message||error);
+  res.status(500).json({error:"AI evaluation unavailable."});
  }
 });
 
@@ -119,12 +130,11 @@ Generate one relevant follow-up question based on what the learner just said.`;
    input
   });
   const result=parseJson(response.output_text);
-  const question=String(result.question||"Can you tell me more about that?");
-  res.json({question});
+  res.json({question:String(result.question||"Can you tell me more about that?")});
  }catch(error){
   console.error("Next-question error:",error?.message||error);
   res.status(500).json({error:"Follow-up question unavailable."});
  }
 });
 
-app.listen(port,()=>console.log(`English AI Tutor Step 4A running on http://localhost:${port}`));
+app.listen(port,()=>console.log(`English AI Tutor Step 4B running on http://localhost:${port}`));

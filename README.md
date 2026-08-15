@@ -1,12 +1,24 @@
-# English AI Tutor — Step 4A: Dynamic Conversations
+# English AI Tutor — Step 4B: Advanced English Evaluation
 
-This version keeps the speaking-only UI and changes the lesson flow from fixed questions to adaptive AI conversation.
+Step 4B builds on dynamic conversations and adds richer evaluation after every spoken answer.
+
+## Evaluation
+
+- Overall
+- Fluency
+- Grammar
+- Vocabulary
+- Sentence structure
+- Pronunciation estimate
+- Specific improvement points
+- Natural correction
+- Personalized practice tip
+
+Pronunciation is intentionally labeled as an estimate. A normal speech-to-text transcript cannot prove exact phoneme-level pronunciation accuracy.
 
 ## Flow
 
-Tutor asks a question → learner speaks → AI analyzes the answer → tutor speaks a personalized response → AI generates a relevant follow-up question → learner continues.
-
-The recent conversation is sent to the backend so follow-up questions can be connected to what the learner actually said.
+Tutor asks → learner speaks → AI evaluates → feedback appears → tutor speaks → AI generates a relevant follow-up.
 
 ## Setup
 
@@ -21,14 +33,12 @@ OPENAI_API_KEY=your_real_key_here
 OPENAI_MODEL=gpt-5.5
 ```
 
-Then:
+Run:
 
 ```bash
 npm start
 ```
 
-Open the server URL and allow microphone access.
+Then open the local server URL and allow microphone access.
 
-The API key is server-side only. Do not put it in `index.html`.
-
-Speech recognition and browser text-to-speech depend on browser support and permissions.
+Never put the API key in `index.html`.

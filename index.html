@@ -29,7 +29,7 @@ h2.main-title{font-size:30px;margin:8px 0 5px}.description{max-width:560px;color
 @keyframes pulse{50%{box-shadow:0 0 0 18px #4f46e51a,0 12px 35px #4f46e555}}
 .instruction{font-weight:700;margin:0 0 5px}.listen-status{font-size:13px;color:var(--muted);min-height:20px}
 .result{width:min(650px,100%);display:none;background:#fff;border:1px solid var(--border);border-radius:18px;padding:16px;text-align:left;margin-top:12px}.score{color:var(--green);font-weight:800}
-.feedback-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-top:14px}.metric{background:#f8fafc;border:1px solid #e5e7eb;border-radius:12px;padding:10px;text-align:center}.metric b{display:block;font-size:18px;color:#4f46e5}.metric span{font-size:10px;color:#6b7280}.correction{margin-top:13px;padding:12px;border-radius:12px;background:#fffbeb;border:1px solid #fde68a;font-size:13px;line-height:1.45}.feedback-title{font-size:12px;color:#6b7280;text-transform:uppercase;font-weight:800;margin-bottom:5px}
+.feedback-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-top:14px}.metric{background:#f8fafc;border:1px solid #e5e7eb;border-radius:12px;padding:10px;text-align:center}.metric b{display:block;font-size:18px;color:#4f46e5}.metric span{font-size:10px;color:#6b7280}.correction{margin-top:13px;padding:12px;border-radius:12px;background:#fffbeb;border:1px solid #fde68a;font-size:13px;line-height:1.45}.feedback-title{font-size:12px;color:#6b7280;text-transform:uppercase;font-weight:800;margin-bottom:5px}
 .controls{display:flex;gap:9px;margin-top:18px}.control{border:1px solid var(--border);background:#fff;border-radius:12px;padding:10px 15px;cursor:pointer;font-weight:700}.control.primary{background:var(--primary);color:#fff;border-color:var(--primary)}
 @media(max-width:760px){header{padding:14px 15px}.status{display:none}main{display:block;padding:10px}.panel{display:none}.practice{min-height:calc(100vh - 84px);border-radius:17px;padding:22px 15px}}
 @media(max-width:520px){.feedback-grid{grid-template-columns:1fr 1fr}.question{font-size:20px}.mic{width:96px;height:96px;font-size:36px}h2.main-title{font-size:26px}}
@@ -64,9 +64,17 @@ h2.main-title{font-size:30px;margin:8px 0 5px}.description{max-width:560px;color
 <div class="result" id="result">
 <div class="feedback-title">Your spoken answer</div><div id="transcript"></div>
 <div class="feedback-grid">
-<div class="metric"><b id="overall">--</b><span>Overall</span></div><div class="metric"><b id="fluency">--</b><span>Fluency</span></div><div class="metric"><b id="grammar">--</b><span>Grammar</span></div><div class="metric"><b id="vocabulary">--</b><span>Vocabulary</span></div>
+<div class="metric"><b id="overall">--</b><span>Overall</span></div>
+<div class="metric"><b id="fluency">--</b><span>Fluency</span></div>
+<div class="metric"><b id="grammar">--</b><span>Grammar</span></div>
+<div class="metric"><b id="vocabulary">--</b><span>Vocabulary</span></div>
+<div class="metric"><b id="sentenceStructure">--</b><span>Sentence Structure</span></div>
+<div class="metric"><b id="pronunciation">--</b><span>Pronunciation*</span></div>
 </div>
 <div class="correction" id="feedbackText"></div>
+<div class="correction" id="mistakesText" style="display:none;background:#fff7f7;border-color:#fecaca"></div>
+<div class="correction" id="adviceText" style="display:none;background:#f0fdf4;border-color:#bbf7d0"></div>
+<div style="font-size:10px;color:#9ca3af;margin-top:8px">*Pronunciation is an estimated speaking metric from available speech/transcription signals, not a laboratory phonetic measurement.</div>
 </div>
 <div class="controls">
 <button class="control" onclick="speakQuestion()">🔊 Hear Question</button>
@@ -130,8 +138,18 @@ function renderConversation(a){
  document.getElementById("fluency").textContent=a.fluency;
  document.getElementById("grammar").textContent=a.grammar;
  document.getElementById("vocabulary").textContent=a.vocabulary;
+ document.getElementById("sentenceStructure").textContent=a.sentenceStructure;
+ document.getElementById("pronunciation").textContent=a.pronunciation;
  document.getElementById("feedbackText").innerHTML="<span class='score'>✓ AI Tutor feedback</span><br>"+a.feedback+
  (a.correction?("<div style='margin-top:8px'><b>Better English:</b> "+a.correction+"</div>"):"");
+ const mistakes=Array.isArray(a.mistakes)?a.mistakes:[];
+ const mistakesBox=document.getElementById("mistakesText");
+ mistakesBox.style.display=mistakes.length?"block":"none";
+ mistakesBox.innerHTML=mistakes.length
+   ?"<b>What to improve</b><ul style='margin:7px 0 0 18px;padding:0'>"+mistakes.map(x=>"<li>"+x+"</li>").join("")+"</ul>":"";
+ const adviceBox=document.getElementById("adviceText");
+ adviceBox.style.display=a.advice?"block":"none";
+ adviceBox.innerHTML=a.advice?"<b>Practice tip</b><br>"+a.advice:"";
  document.getElementById("result").style.display="block";
 }
 async function analyzeAnswer(text){
