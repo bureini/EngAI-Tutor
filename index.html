@@ -38,7 +38,7 @@ h2.main-title{font-size:30px;margin:8px 0 5px}.description{max-width:560px;color
 <body>
 <div class="app">
 <header>
-<div class="brand"><div class="logo">🎙️</div><div><h1>English Speaking AI Tutor</h1><div class="subtitle">Practice speaking English with your personal AI tutor</div></div></div>
+<div class="brand"><div class="logo">🎙️</div><div><h1>English Speaking AI Tutor</h1><div class="subtitle">Have natural English conversations with your personal AI tutor</div></div></div>
 <div class="status">● AI Speaking Tutor</div>
 </header>
 <main>
@@ -53,11 +53,11 @@ h2.main-title{font-size:30px;margin:8px 0 5px}.description{max-width:560px;color
 <section class="practice">
 <div class="practice-title">Speaking Practice</div>
 <h2 class="main-title">Let's speak English!</h2>
-<p class="description">Listen to the question, then tap the microphone and answer naturally. Your AI tutor will analyze your English and give you feedback.</p>
+<p class="description">Listen to the tutor, speak naturally, and keep the conversation going. Your AI tutor adapts its follow-up questions to what you say.</p>
 <div class="topic">
 <button class="active" onclick="setTopic('Daily Life',this)">Daily Life</button><button onclick="setTopic('Travel',this)">Travel</button><button onclick="setTopic('Work',this)">Work</button><button onclick="setTopic('Hobbies',this)">Hobbies</button>
 </div>
-<div class="prompt"><div class="prompt-label" id="topicLabel">Daily Life</div><div class="question" id="question">What did you do today?</div><div class="hint">Try to answer in 1–3 complete sentences.</div></div>
+<div class="prompt"><div class="prompt-label" id="topicLabel">Daily Life</div><div id="turnLabel" style="font-size:11px;color:#6b7280;margin-top:5px">Conversation turn 1</div><div class="question" id="question">What did you do today?</div><div class="hint">Try to answer in 1–3 complete sentences.</div></div>
 <div class="mic-wrap"><button class="mic" id="mic" onclick="startSpeaking()" aria-label="Start speaking">🎙️</button></div>
 <p class="instruction" id="instruction">Tap the microphone to speak</p>
 <div class="listen-status" id="status">Your answer will appear below.</div>
@@ -80,12 +80,32 @@ h2.main-title{font-size:30px;margin:8px 0 5px}.description{max-width:560px;color
 </main>
 </div>
 <script>
-const questions={"Daily Life":["What did you do today?","What is your usual morning routine?","What do you like to do after work or school?"],"Travel":["Where would you like to travel?","Tell me about a place you have visited.","What would you pack for a trip?"],"Work":["What do you do at work?","What do you enjoy about your work?","Describe a typical working day."],"Hobbies":["What is your favorite hobby?","How often do you practice your hobby?","What new hobby would you like to try?"]};
-let topic="Daily Life",index=0;
+const questions={
+"Daily Life":["What did you do today?","What is your usual morning routine?","What do you like to do after work or school?"],
+"Travel":["Where would you like to travel?","Tell me about a place you have visited.","What would you pack for a trip?"],
+"Work":["What do you do at work?","What do you enjoy about your work?","Describe a typical working day."],
+"Hobbies":["What is your favorite hobby?","How often do you practice your hobby?","What new hobby would you like to try?"]
+};
+let topic="Daily Life",index=0,turn=1,lastTutorText="",conversation=[];
 const q=document.getElementById("question"),label=document.getElementById("topicLabel"),mic=document.getElementById("mic"),status=document.getElementById("status");
-function setTopic(t,btn){topic=t;index=0;label.textContent=t;q.textContent=questions[t][0];document.querySelectorAll(".topic button").forEach(b=>b.classList.remove("active"));btn.classList.add("active");hideResult()}
-function nextQuestion(){index=(index+1)%questions[topic].length;q.textContent=questions[topic][index];hideResult();speakQuestion()}
-function speakQuestion(){if("speechSynthesis"in window){speechSynthesis.cancel();const u=new SpeechSynthesisUtterance(q.textContent);u.lang="en-US";u.rate=.9;speechSynthesis.speak(u)}}
+const turnLabel=document.getElementById("turnLabel");
+
+function updateTurn(){turnLabel.textContent="Conversation turn "+turn}
+function setTopic(t,btn){
+ topic=t;index=0;turn=1;conversation=[];
+ label.textContent=t;q.textContent=questions[t][0];updateTurn();
+ document.querySelectorAll(".topic button").forEach(b=>b.classList.remove("active"));btn.classList.add("active");
+ hideResult();
+}
+function nextQuestion(){
+ index=(index+1)%questions[topic].length;turn=1;conversation=[];
+ q.textContent=questions[topic][index];updateTurn();hideResult();speakQuestion();
+}
+function speakQuestion(){
+ if("speechSynthesis"in window){
+  speechSynthesis.cancel();const u=new SpeechSynthesisUtterance(q.textContent);u.lang="en-US";u.rate=.9;speechSynthesis.speak(u)
+ }
+}
 function hideResult(){
  document.getElementById("result").style.display="none";
  document.getElementById("replayBtn").style.display="none";
@@ -93,45 +113,19 @@ function hideResult(){
  lastTutorText="";
  status.textContent="Your answer will appear below.";
 }
-async function analyzeAnswer(text){
-const response=await fetch("/api/analyze",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({
-answer:text,question:q.textContent,
-level:document.querySelector(".level button.active")?.textContent||"Beginner",topic
-})});
-if(!response.ok)throw new Error("AI analysis failed");
-return await response.json();
-}
-
 function speakText(text,onEnd){
- if(!("speechSynthesis" in window)){status.textContent="Your browser does not support tutor voice playback.";if(onEnd)onEnd();return}
+ if(!("speechSynthesis"in window)){status.textContent="Your browser does not support tutor voice playback.";if(onEnd)onEnd();return}
  speechSynthesis.cancel();
- const clean=text.replace(/<[^>]*>/g,"").replace(/&nbsp;/g," ");
- const u=new SpeechSynthesisUtterance(clean);
- u.lang="en-US";u.rate=.92;u.pitch=1;
- u.onstart=()=>{status.textContent="🔊 AI tutor is speaking…"};
+ const clean=String(text||"").replace(/<[^>]*>/g,"").replace(/&nbsp;/g," ");
+ const u=new SpeechSynthesisUtterance(clean);u.lang="en-US";u.rate=.92;u.pitch=1;
+ u.onstart=()=>status.textContent="🔊 AI tutor is speaking…";
  u.onend=()=>{if(onEnd)onEnd()};
  speechSynthesis.speak(u);
 }
-
-let lastTutorText="";
-
 function buildTutorSpeech(a){
- return a.voiceResponse || a.feedback || "Good effort. Keep speaking and practicing your English.";
+ return a.voiceResponse||a.feedback||"Good effort. Keep speaking and practicing your English.";
 }
-
-async function startSpeaking(){
-const Recognition=window.SpeechRecognition||window.webkitSpeechRecognition;
-if(!Recognition){status.textContent="Speech recognition is not supported in this browser. Please use Chrome or another supported browser.";return}
-speechSynthesis?.cancel();
-const r=new Recognition();r.lang="en-US";r.interimResults=false;r.maxAlternatives=1;
-mic.classList.add("listening");document.getElementById("instruction").textContent="Listening… speak now";status.textContent="I'm listening to you.";
-r.onresult=async e=>{
-const text=e.results[0][0].transcript;
-document.getElementById("transcript").textContent=text;
-status.textContent="AI tutor is analyzing your English…";
-document.getElementById("instruction").textContent="Analyzing your answer…";
-try{
- const a=await analyzeAnswer(text);
+function renderConversation(a){
  document.getElementById("overall").textContent=a.overall;
  document.getElementById("fluency").textContent=a.fluency;
  document.getElementById("grammar").textContent=a.grammar;
@@ -139,32 +133,80 @@ try{
  document.getElementById("feedbackText").innerHTML="<span class='score'>✓ AI Tutor feedback</span><br>"+a.feedback+
  (a.correction?("<div style='margin-top:8px'><b>Better English:</b> "+a.correction+"</div>"):"");
  document.getElementById("result").style.display="block";
- lastTutorText=buildTutorSpeech(a);
- document.getElementById("replayBtn").style.display="inline-block";
- document.getElementById("continueBtn").style.display="inline-block";
- document.getElementById("instruction").textContent="Your tutor is ready to respond";
- speakText(lastTutorText,()=>{status.textContent="Your turn. Tap the microphone and continue speaking.";document.getElementById("instruction").textContent="Tap the microphone to speak"});
-}catch(err){
- status.textContent="The AI tutor could not analyze the answer. Check that the server and API key are configured.";
- document.getElementById("instruction").textContent="Tap the microphone to try again";
-}};
-r.onerror=e=>{status.textContent=e.error==="not-allowed"?"Microphone permission was denied. Please allow microphone access.":"I couldn't hear you clearly. Please try again."};
-r.onend=()=>mic.classList.remove("listening");
-r.start();
 }
-
-function replayTutor(){
- if(lastTutorText)speakText(lastTutorText,()=>{status.textContent="Your turn. Tap the microphone and continue speaking."});
+async function analyzeAnswer(text){
+ const response=await fetch("/api/conversation",{
+  method:"POST",headers:{"Content-Type":"application/json"},
+  body:JSON.stringify({
+   answer:text,question:q.textContent,level:document.querySelector(".level button.active")?.textContent||"Beginner",
+   topic,turn,history:conversation.slice(-6)
+  })
+ });
+ if(!response.ok)throw new Error("AI conversation failed");
+ return await response.json();
 }
-
-function continueConversation(){
- const next=questions[topic];
- index=(index+1)%next.length;
- q.textContent=next[index];
- hideResult();
+async function startSpeaking(){
+ const Recognition=window.SpeechRecognition||window.webkitSpeechRecognition;
+ if(!Recognition){status.textContent="Speech recognition is not supported in this browser. Please use Chrome or another supported browser.";return}
+ speechSynthesis?.cancel();
+ const r=new Recognition();r.lang="en-US";r.interimResults=false;r.maxAlternatives=1;
+ mic.classList.add("listening");document.getElementById("instruction").textContent="Listening… speak now";status.textContent="I'm listening to you.";
+ r.onresult=async e=>{
+  const text=e.results[0][0].transcript;
+  document.getElementById("transcript").textContent=text;
+  conversation.push({role:"learner",text});
+  status.textContent="AI tutor is thinking about your answer…";
+  document.getElementById("instruction").textContent="Creating your personalized response…";
+  try{
+   const a=await analyzeAnswer(text);
+   conversation.push({role:"tutor",text:a.voiceResponse||a.feedback});
+   renderConversation(a);
+   lastTutorText=buildTutorSpeech(a);
+   document.getElementById("replayBtn").style.display="inline-block";
+   document.getElementById("continueBtn").style.display="inline-block";
+   document.getElementById("instruction").textContent="Your tutor is responding…";
+   speakText(lastTutorText,()=>{
+    status.textContent="Your turn. Tap the microphone and continue the conversation.";
+    document.getElementById("instruction").textContent="Tap the microphone to speak";
+   });
+  }catch(err){
+   status.textContent="The AI tutor could not continue the conversation. Check that the server and API key are configured.";
+   document.getElementById("instruction").textContent="Tap the microphone to try again";
+  }
+ };
+ r.onerror=e=>{status.textContent=e.error==="not-allowed"?"Microphone permission was denied. Please allow microphone access.":"I couldn't hear you clearly. Please try again."};
+ r.onend=()=>mic.classList.remove("listening");
+ r.start();
+}
+function replayTutor(){if(lastTutorText)speakText(lastTutorText,()=>{status.textContent="Your turn. Tap the microphone and continue the conversation."})}
+async function continueConversation(){
+ turn++;
+ updateTurn();
  document.getElementById("replayBtn").style.display="none";
  document.getElementById("continueBtn").style.display="none";
- speakQuestion();
+ status.textContent="AI tutor is preparing the next question…";
+ document.getElementById("instruction").textContent="Preparing follow-up…";
+ try{
+  const response=await fetch("/api/next-question",{
+   method:"POST",headers:{"Content-Type":"application/json"},
+   body:JSON.stringify({
+    topic,level:document.querySelector(".level button.active")?.textContent||"Beginner",
+    currentQuestion:q.textContent,history:conversation.slice(-8),turn
+   })
+  });
+  if(!response.ok)throw new Error("next question failed");
+  const data=await response.json();
+  q.textContent=data.question;
+  label.textContent=topic;
+  updateTurn();
+  document.getElementById("result").style.display="none";
+  status.textContent="Listen to your tutor, then answer.";
+  document.getElementById("instruction").textContent="Tutor is asking a follow-up question…";
+  speakText(data.question,()=>{status.textContent="Your turn. Tap the microphone.";document.getElementById("instruction").textContent="Tap the microphone to speak"});
+ }catch(e){
+  status.textContent="I couldn't create a follow-up question. Please try again.";
+  document.getElementById("instruction").textContent="Tap Continue Speaking again";
+ }
 }
 document.querySelectorAll(".level button").forEach(b=>b.onclick=()=>{document.querySelectorAll(".level button").forEach(x=>x.classList.remove("active"));b.classList.add("active")});
 </script>
