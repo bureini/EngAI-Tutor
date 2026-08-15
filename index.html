@@ -1,0 +1,101 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<meta name="theme-color" content="#4f46e5">
+<title>English Speaking AI Tutor</title>
+<style>
+*{box-sizing:border-box}
+:root{--primary:#4f46e5;--purple:#7c3aed;--bg:#f5f7fb;--card:#fff;--text:#172033;--muted:#6b7280;--border:#e5e7eb;--green:#10b981}
+body{margin:0;font-family:Inter,system-ui,-apple-system,"Segoe UI",sans-serif;background:var(--bg);color:var(--text);min-height:100vh}
+.app{max-width:1050px;margin:auto;min-height:100vh;display:flex;flex-direction:column}
+header{background:linear-gradient(135deg,var(--primary),var(--purple));color:#fff;padding:18px 22px;display:flex;align-items:center;justify-content:space-between;box-shadow:0 4px 18px #0002}
+.brand{display:flex;gap:12px;align-items:center}.logo{width:46px;height:46px;border-radius:15px;background:#ffffff22;display:grid;place-items:center;font-size:25px}
+h1{font-size:20px;margin:0}.subtitle{font-size:12px;opacity:.84;margin-top:3px}.status{font-size:12px;background:#ffffff20;border:1px solid #ffffff35;padding:8px 12px;border-radius:20px}
+main{display:grid;grid-template-columns:250px 1fr;gap:18px;padding:18px;flex:1}
+.panel,.practice{background:var(--card);border:1px solid var(--border);border-radius:22px;box-shadow:0 5px 20px #11100008}
+.panel{padding:18px;height:max-content}.panel h2{font-size:15px;margin:0 0 14px}
+.level{display:grid;grid-template-columns:1fr 1fr;gap:8px}.level button{border:1px solid var(--border);background:#fff;border-radius:12px;padding:10px 7px;cursor:pointer;font-weight:600;color:#4b5563}
+.level button.active{background:#eef2ff;color:var(--primary);border-color:#c7d2fe}
+.progress{margin-top:20px;padding:14px;border-radius:15px;background:#f9fafb}.progress-row{display:flex;justify-content:space-between;font-size:12px;color:var(--muted);margin-bottom:7px}.bar{height:7px;background:#e5e7eb;border-radius:20px;overflow:hidden}.bar span{display:block;width:45%;height:100%;background:linear-gradient(90deg,var(--primary),var(--purple))}
+.practice{min-height:650px;padding:28px;display:flex;flex-direction:column;align-items:center;text-align:center}
+.practice-title{font-size:14px;color:var(--muted);font-weight:700;text-transform:uppercase;letter-spacing:.08em}
+h2.main-title{font-size:30px;margin:8px 0 5px}.description{max-width:560px;color:var(--muted);line-height:1.5;margin:0 auto 24px}
+.topic{display:flex;gap:8px;flex-wrap:wrap;justify-content:center;margin-bottom:28px}.topic button{border:1px solid var(--border);background:#fff;border-radius:20px;padding:9px 14px;cursor:pointer;color:#4b5563;font-weight:600}.topic button.active{background:#eef2ff;border-color:#c7d2fe;color:var(--primary)}
+.prompt{width:min(650px,100%);background:#f8faff;border:1px solid #dbe3ff;border-radius:20px;padding:22px;margin-bottom:25px}
+.prompt-label{font-size:12px;color:var(--primary);font-weight:800;text-transform:uppercase;letter-spacing:.08em}.question{font-size:23px;font-weight:700;line-height:1.35;margin:10px 0 5px}.hint{font-size:13px;color:var(--muted)}
+.mic-wrap{position:relative;margin:5px 0 15px}.mic{width:112px;height:112px;border-radius:50%;border:0;background:linear-gradient(135deg,var(--primary),var(--purple));color:#fff;font-size:42px;cursor:pointer;box-shadow:0 12px 30px #4f46e544;transition:.2s}.mic:active{transform:scale(.95)}.mic.listening{animation:pulse 1.2s infinite}
+@keyframes pulse{50%{box-shadow:0 0 0 18px #4f46e51a,0 12px 35px #4f46e555}}
+.instruction{font-weight:700;margin:0 0 5px}.listen-status{font-size:13px;color:var(--muted);min-height:20px}
+.result{width:min(650px,100%);display:none;background:#fff;border:1px solid var(--border);border-radius:18px;padding:16px;text-align:left;margin-top:12px}.score{color:var(--green);font-weight:800}
+.feedback-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-top:14px}.metric{background:#f8fafc;border:1px solid #e5e7eb;border-radius:12px;padding:10px;text-align:center}.metric b{display:block;font-size:18px;color:#4f46e5}.metric span{font-size:10px;color:#6b7280}.correction{margin-top:13px;padding:12px;border-radius:12px;background:#fffbeb;border:1px solid #fde68a;font-size:13px;line-height:1.45}.feedback-title{font-size:12px;color:#6b7280;text-transform:uppercase;font-weight:800;margin-bottom:5px}
+.controls{display:flex;gap:9px;margin-top:18px}.control{border:1px solid var(--border);background:#fff;border-radius:12px;padding:10px 15px;cursor:pointer;font-weight:700}.control.primary{background:var(--primary);color:#fff;border-color:var(--primary)}
+@media(max-width:760px){header{padding:14px 15px}.status{display:none}main{display:block;padding:10px}.panel{display:none}.practice{min-height:calc(100vh - 84px);border-radius:17px;padding:22px 15px}}
+@media(max-width:520px){.feedback-grid{grid-template-columns:1fr 1fr}.question{font-size:20px}.mic{width:96px;height:96px;font-size:36px}h2.main-title{font-size:26px}}
+</style>
+</head>
+<body>
+<div class="app">
+<header>
+<div class="brand"><div class="logo">🎙️</div><div><h1>English Speaking AI Tutor</h1><div class="subtitle">Practice speaking English with your personal AI tutor</div></div></div>
+<div class="status">● AI Speaking Tutor</div>
+</header>
+<main>
+<aside class="panel">
+<h2>Your Level</h2>
+<div class="level">
+<button class="active">Beginner</button><button>Elementary</button>
+<button>Intermediate</button><button>Advanced</button>
+</div>
+<div class="progress"><div class="progress-row"><span>Speaking progress</span><b>45%</b></div><div class="bar"><span></span></div></div>
+</aside>
+<section class="practice">
+<div class="practice-title">Speaking Practice</div>
+<h2 class="main-title">Let's speak English!</h2>
+<p class="description">Listen to the question, then tap the microphone and answer naturally. Your AI tutor will analyze your English and give you feedback.</p>
+<div class="topic">
+<button class="active" onclick="setTopic('Daily Life',this)">Daily Life</button><button onclick="setTopic('Travel',this)">Travel</button><button onclick="setTopic('Work',this)">Work</button><button onclick="setTopic('Hobbies',this)">Hobbies</button>
+</div>
+<div class="prompt"><div class="prompt-label" id="topicLabel">Daily Life</div><div class="question" id="question">What did you do today?</div><div class="hint">Try to answer in 1–3 complete sentences.</div></div>
+<div class="mic-wrap"><button class="mic" id="mic" onclick="startSpeaking()" aria-label="Start speaking">🎙️</button></div>
+<p class="instruction" id="instruction">Tap the microphone to speak</p>
+<div class="listen-status" id="status">Your answer will appear below.</div>
+<div class="result" id="result">
+<div class="feedback-title">Your spoken answer</div><div id="transcript"></div>
+<div class="feedback-grid">
+<div class="metric"><b id="overall">--</b><span>Overall</span></div><div class="metric"><b id="fluency">--</b><span>Fluency</span></div><div class="metric"><b id="grammar">--</b><span>Grammar</span></div><div class="metric"><b id="vocabulary">--</b><span>Vocabulary</span></div>
+</div>
+<div class="correction" id="feedbackText"></div>
+</div>
+<div class="controls"><button class="control" onclick="speakQuestion()">🔊 Hear Question</button><button class="control primary" onclick="nextQuestion()">Next Question →</button></div>
+</section>
+</main>
+</div>
+<script>
+const questions={"Daily Life":["What did you do today?","What is your usual morning routine?","What do you like to do after work or school?"],"Travel":["Where would you like to travel?","Tell me about a place you have visited.","What would you pack for a trip?"],"Work":["What do you do at work?","What do you enjoy about your work?","Describe a typical working day."],"Hobbies":["What is your favorite hobby?","How often do you practice your hobby?","What new hobby would you like to try?"]};
+let topic="Daily Life",index=0;
+const q=document.getElementById("question"),label=document.getElementById("topicLabel"),mic=document.getElementById("mic"),status=document.getElementById("status");
+function setTopic(t,btn){topic=t;index=0;label.textContent=t;q.textContent=questions[t][0];document.querySelectorAll(".topic button").forEach(b=>b.classList.remove("active"));btn.classList.add("active");hideResult()}
+function nextQuestion(){index=(index+1)%questions[topic].length;q.textContent=questions[topic][index];hideResult();speakQuestion()}
+function speakQuestion(){if("speechSynthesis"in window){speechSynthesis.cancel();const u=new SpeechSynthesisUtterance(q.textContent);u.lang="en-US";u.rate=.9;speechSynthesis.speak(u)}}
+function hideResult(){document.getElementById("result").style.display="none";status.textContent="Your answer will appear below."}
+async function analyzeAnswer(text){
+const response=await fetch("/api/analyze",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({answer:text,question:q.textContent,level:document.querySelector(".level button.active")?.textContent||"Beginner",topic})});
+if(!response.ok)throw new Error("AI analysis failed");return await response.json();
+}
+async function startSpeaking(){
+const Recognition=window.SpeechRecognition||window.webkitSpeechRecognition;
+if(!Recognition){status.textContent="Speech recognition is not supported in this browser. Please use Chrome or another supported browser.";return}
+const r=new Recognition();r.lang="en-US";r.interimResults=false;r.maxAlternatives=1;
+mic.classList.add("listening");document.getElementById("instruction").textContent="Listening… speak now";status.textContent="I'm listening to you.";
+r.onresult=async e=>{
+const text=e.results[0][0].transcript;document.getElementById("transcript").textContent=text;status.textContent="AI tutor is analyzing your English…";document.getElementById("instruction").textContent="Analyzing your answer…";
+try{const a=await analyzeAnswer(text);document.getElementById("overall").textContent=a.overall;document.getElementById("fluency").textContent=a.fluency;document.getElementById("grammar").textContent=a.grammar;document.getElementById("vocabulary").textContent=a.vocabulary;document.getElementById("feedbackText").innerHTML="<span class='score'>✓ AI Tutor feedback</span><br>"+a.feedback+(a.correction?("<div style='margin-top:8px'><b>Better English:</b> "+a.correction+"</div>"):"");document.getElementById("result").style.display="block";status.textContent="AI analysis complete.";document.getElementById("instruction").textContent="Tap the microphone to try again"}catch(err){status.textContent="The AI tutor could not analyze the answer. Check that the server and API key are configured.";document.getElementById("instruction").textContent="Tap the microphone to try again"}};
+r.onerror=e=>{status.textContent=e.error==="not-allowed"?"Microphone permission was denied. Please allow microphone access.":"I couldn't hear you clearly. Please try again."};
+r.onend=()=>mic.classList.remove("listening");r.start();
+}
+document.querySelectorAll(".level button").forEach(b=>b.onclick=()=>{document.querySelectorAll(".level button").forEach(x=>x.classList.remove("active"));b.classList.add("active")});
+</script>
+</body>
+</html>
