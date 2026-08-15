@@ -33,6 +33,10 @@ h2.main-title{font-size:30px;margin:8px 0 5px}.description{max-width:560px;color
 .controls{display:flex;gap:9px;margin-top:18px}.control{border:1px solid var(--border);background:#fff;border-radius:12px;padding:10px 15px;cursor:pointer;font-weight:700}.control.primary{background:var(--primary);color:#fff;border-color:var(--primary)}
 @media(max-width:760px){header{padding:14px 15px}.status{display:none}main{display:block;padding:10px}.panel{display:none}.practice{min-height:calc(100vh - 84px);border-radius:17px;padding:22px 15px}}
 @media(max-width:520px){.feedback-grid{grid-template-columns:1fr 1fr}.question{font-size:20px}.mic{width:96px;height:96px;font-size:36px}h2.main-title{font-size:26px}}
+
+.progress-history{margin-top:14px}
+.progress-history-item{padding:10px 0;border-top:1px solid #e5e7eb;font-size:13px}
+.progress-history-item:first-child{border-top:0}
 </style>
 </head>
 <body>
@@ -78,12 +82,31 @@ h2.main-title{font-size:30px;margin:8px 0 5px}.description{max-width:560px;color
 </div>
 <div class="controls">
 <button class="control" onclick="speakQuestion()">🔊 Hear Question</button>
-<button class="control primary" onclick="nextQuestion()">Next Question →</button>
+<button class="control primary" onclick="nextQuestion()">Next Question →</button><button class="control" onclick="toggleProgress()">📈 Progress</button>
 </div>
 <div class="controls" style="margin-top:9px">
 <button class="control" id="replayBtn" onclick="replayTutor()" style="display:none">🔁 Hear Feedback</button>
 <button class="control primary" id="continueBtn" onclick="continueConversation()" style="display:none">Continue Speaking →</button>
 </div>
+
+<section id="progressPanel" style="display:none;width:min(650px,100%);margin-top:18px;text-align:left;background:#f8fafc;border:1px solid #e5e7eb;border-radius:18px;padding:16px">
+  <div style="display:flex;justify-content:space-between;align-items:center;gap:10px">
+    <div>
+      <div class="feedback-title">Learning Progress</div>
+      <div style="font-weight:800;font-size:18px">Your speaking journey</div>
+    </div>
+    <div style="display:flex;gap:6px"><button class="control" onclick="refreshProgress()">↻ Refresh</button><button class="control" onclick="resetProgress()">Clear</button></div>
+  </div>
+  <div class="feedback-grid" style="margin-top:12px">
+    <div class="metric"><b id="sessionsStat">0</b><span>Sessions</span></div>
+    <div class="metric"><b id="answersStat">0</b><span>Answers</span></div>
+    <div class="metric"><b id="avgStat">--</b><span>Avg. Score</span></div>
+    <div class="metric"><b id="fluencyStat">--</b><span>Fluency</span></div>
+    <div class="metric"><b id="grammarStat">--</b><span>Grammar</span></div>
+    <div class="metric"><b id="vocabStat">--</b><span>Vocabulary</span></div>
+  </div>
+  <div id="progressAdvice" class="correction" style="display:none;background:#eef2ff;border-color:#c7d2fe"></div>
+</section>
 </section>
 </main>
 </div>
@@ -100,12 +123,13 @@ const turnLabel=document.getElementById("turnLabel");
 
 function updateTurn(){turnLabel.textContent="Conversation turn "+turn}
 function setTopic(t,btn){
- topic=t;index=0;turn=1;conversation=[];
+ topic=t;index=0;turn=1;conversation=[];currentSessionId=null;
  label.textContent=t;q.textContent=questions[t][0];updateTurn();
  document.querySelectorAll(".topic button").forEach(b=>b.classList.remove("active"));btn.classList.add("active");
  hideResult();
 }
 function nextQuestion(){
+ currentSessionId=null;
  index=(index+1)%questions[topic].length;turn=1;conversation=[];
  q.textContent=questions[topic][index];updateTurn();hideResult();speakQuestion();
 }
@@ -226,6 +250,76 @@ async function continueConversation(){
   document.getElementById("instruction").textContent="Tap Continue Speaking again";
  }
 }
+
+const PROGRESS_KEY="english_ai_tutor_progress_v1";
+
+function getProgress(){
+ try{return JSON.parse(localStorage.getItem(PROGRESS_KEY)||'{"sessions":[],"answers":[]}')}
+ catch(e){return {sessions:[],answers:[]}}
+}
+function saveProgress(p){localStorage.setItem(PROGRESS_KEY,JSON.stringify(p))}
+function startProgressSession(){
+ const p=getProgress();
+ const session={id:Date.now(),startedAt:new Date().toISOString(),topic,level:document.querySelector(".level button.active")?.textContent||"Beginner",answers:[]};
+ p.sessions.push(session);
+ if(p.sessions.length>50)p.sessions=p.sessions.slice(-50);
+ saveProgress(p);
+ return session.id;
+}
+let currentSessionId=null;
+function recordAnswer(a){
+ const p=getProgress();
+ if(!currentSessionId)currentSessionId=startProgressSession();
+ let s=p.sessions.find(x=>x.id===currentSessionId);
+ if(!s){currentSessionId=startProgressSession();s=getProgress().sessions.find(x=>x.id===currentSessionId)}
+ const record={
+  time:new Date().toISOString(),topic,level:s.level,question:q.textContent,
+  answer:document.getElementById("transcript").textContent,
+  overall:Number(a.overall)||0,fluency:Number(a.fluency)||0,grammar:Number(a.grammar)||0,
+  vocabulary:Number(a.vocabulary)||0,sentenceStructure:Number(a.sentenceStructure)||0,
+  pronunciation:Number(a.pronunciation)||0
+ };
+ s.answers.push(record);
+ p.answers.push(record);
+ if(p.answers.length>300)p.answers=p.answers.slice(-300);
+ saveProgress(p);
+}
+function progressSummary(){
+ const p=getProgress(), a=p.answers||[];
+ const avg=key=>a.length?Math.round(a.reduce((n,x)=>n+(Number(x[key])||0),0)/a.length):null;
+ return {sessions:(p.sessions||[]).length,answers:a.length,avg:avg("overall"),fluency:avg("fluency"),grammar:avg("grammar"),vocabulary:avg("vocabulary")};
+}
+function refreshProgress(){
+ const s=progressSummary();
+ document.getElementById("sessionsStat").textContent=s.sessions;
+ document.getElementById("answersStat").textContent=s.answers;
+ document.getElementById("avgStat").textContent=s.avg==null?"--":s.avg;
+ document.getElementById("fluencyStat").textContent=s.fluency==null?"--":s.fluency;
+ document.getElementById("grammarStat").textContent=s.grammar==null?"--":s.grammar;
+ document.getElementById("vocabStat").textContent=s.vocabulary==null?"--":s.vocabulary;
+ const box=document.getElementById("progressAdvice");
+ if(s.answers){
+   let strongest=[["Fluency",s.fluency],["Grammar",s.grammar],["Vocabulary",s.vocabulary]].sort((a,b)=>b[1]-a[1]);
+   let weakest=[["Fluency",s.fluency],["Grammar",s.grammar],["Vocabulary",s.vocabulary]].sort((a,b)=>a[1]-b[1])[0];
+   box.style.display="block";
+   box.innerHTML="<b>Personalized progress tip</b><br>Your strongest area is <b>"+strongest[0][0]+"</b>. Keep working on <b>"+weakest[0][0]+"</b> to make your speaking more balanced.";
+ }else{
+   box.style.display="block";
+   box.innerHTML="<b>Start your first speaking session.</b><br>Your scores will appear here after you complete an answer.";
+ }
+}
+function toggleProgress(){
+ const panel=document.getElementById("progressPanel");
+ const visible=panel.style.display!=="none";
+ panel.style.display=visible?"none":"block";
+ if(!visible)refreshProgress();
+}
+function resetProgress(){
+ if(confirm("Clear all saved learning progress on this device?")){
+  localStorage.removeItem(PROGRESS_KEY);currentSessionId=null;refreshProgress();
+ }
+}
+
 document.querySelectorAll(".level button").forEach(b=>b.onclick=()=>{document.querySelectorAll(".level button").forEach(x=>x.classList.remove("active"));b.classList.add("active")});
 </script>
 </body>

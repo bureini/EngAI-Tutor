@@ -1,24 +1,29 @@
-# English AI Tutor — Step 4B: Advanced English Evaluation
+# English AI Tutor — Step 4C: Learning Progress
 
-Step 4B builds on dynamic conversations and adds richer evaluation after every spoken answer.
+Step 4C adds local learner progress tracking to the speaking tutor.
 
-## Evaluation
+## What is tracked
 
-- Overall
-- Fluency
-- Grammar
-- Vocabulary
-- Sentence structure
-- Pronunciation estimate
-- Specific improvement points
-- Natural correction
-- Personalized practice tip
+After each completed speaking answer, the app stores locally:
 
-Pronunciation is intentionally labeled as an estimate. A normal speech-to-text transcript cannot prove exact phoneme-level pronunciation accuracy.
+- session count
+- answer count
+- overall score
+- fluency
+- grammar
+- vocabulary
+- sentence structure
+- pronunciation estimate
+- topic, level and question
+- date/time
 
-## Flow
+The app displays a compact progress dashboard with average scores and a personalized progress tip.
 
-Tutor asks → learner speaks → AI evaluates → feedback appears → tutor speaks → AI generates a relevant follow-up.
+## Privacy
+
+Progress is stored in the browser's `localStorage` on the device. It is not sent to the AI server as a separate profile database.
+
+The **Clear** button removes the saved progress from that browser/device.
 
 ## Setup
 
@@ -39,6 +44,8 @@ Run:
 npm start
 ```
 
-Then open the local server URL and allow microphone access.
+Then open the server URL and allow microphone access.
 
-Never put the API key in `index.html`.
+## Next stage
+
+A future version can replace localStorage with a real account/database system for cross-device progress and richer analytics.
