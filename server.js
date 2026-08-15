@@ -61,12 +61,13 @@ function historyText(history){
 
 app.post("/api/conversation",async(req,res)=>{
  try{
-  const {answer,question,level="Beginner",topic="Daily Life",turn=1,history=[],speechConfidence=null}=req.body||{};
+  const {answer,question,lesson="",level="Beginner",topic="Daily Life",turn=1,history=[],speechConfidence=null}=req.body||{};
   if(!answer||typeof answer!=="string")return res.status(400).json({error:"Missing spoken answer."});
   if(!process.env.OPENAI_API_KEY)return res.status(503).json({error:"OPENAI_API_KEY is not configured."});
 
   const confidenceLine=speechConfidence==null?"Speech confidence: unavailable":`Speech recognition confidence: ${Number(speechConfidence).toFixed(2)}`;
   const input=`Learner level: ${level}
+Lesson: ${lesson}
 Topic: ${topic}
 Conversation turn: ${turn}
 Current tutor question: ${question||""}
@@ -112,10 +113,11 @@ Evaluate the learner carefully and then continue the conversation.`;
 
 app.post("/api/next-question",async(req,res)=>{
  try{
-  const {topic="Daily Life",level="Beginner",currentQuestion="",history=[],turn=1}=req.body||{};
+  const {topic="Daily Life",lesson="",level="Beginner",currentQuestion="",history=[],turn=1}=req.body||{};
   if(!process.env.OPENAI_API_KEY)return res.status(503).json({error:"OPENAI_API_KEY is not configured."});
 
-  const input=`Topic: ${topic}
+  const input=`Lesson: ${lesson}
+Topic: ${topic}
 Learner level: ${level}
 Conversation turn: ${turn}
 Previous tutor question: ${currentQuestion}

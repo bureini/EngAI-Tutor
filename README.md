@@ -1,29 +1,21 @@
-# English AI Tutor — Step 4C: Learning Progress
+# English AI Tutor — Step 4D: Structured Lessons
 
-Step 4C adds local learner progress tracking to the speaking tutor.
+Step 4D turns the speaking tutor into a structured English learning course.
 
-## What is tracked
+## Included lessons
 
-After each completed speaking answer, the app stores locally:
+1. Introducing Yourself — Beginner
+2. Daily Conversation — Beginner
+3. Family & Friends — Beginner
+4. Work & School — Elementary
+5. Shopping — Elementary
+6. Travel — Elementary
+7. Food & Restaurants — Elementary
+8. Health & Wellbeing — Intermediate
+9. Job Interview — Advanced
+10. Real-life Conversation — Advanced
 
-- session count
-- answer count
-- overall score
-- fluency
-- grammar
-- vocabulary
-- sentence structure
-- pronunciation estimate
-- topic, level and question
-- date/time
-
-The app displays a compact progress dashboard with average scores and a personalized progress tip.
-
-## Privacy
-
-Progress is stored in the browser's `localStorage` on the device. It is not sent to the AI server as a separate profile database.
-
-The **Clear** button removes the saved progress from that browser/device.
+Each lesson provides a focused topic, recommended level, starter questions, dynamic AI follow-ups, progress tracking, and a completion action.
 
 ## Setup
 
@@ -44,8 +36,8 @@ Run:
 npm start
 ```
 
-Then open the server URL and allow microphone access.
+Open the server URL and allow microphone access.
 
-## Next stage
+## Notes
 
-A future version can replace localStorage with a real account/database system for cross-device progress and richer analytics.
+Lesson completion and learning progress are stored locally in the browser for this prototype. The AI API key stays on the server.

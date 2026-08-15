@@ -52,14 +52,36 @@ h2.main-title{font-size:30px;margin:8px 0 5px}.description{max-width:560px;color
 <button class="active">Beginner</button><button>Elementary</button>
 <button>Intermediate</button><button>Advanced</button>
 </div>
+
+<div style="margin-top:20px">
+<h2>Lessons</h2>
+<select id="lessonSelect" onchange="selectLesson(this.value)" style="width:100%;padding:10px;border:1px solid #e5e7eb;border-radius:12px;background:#fff;color:#374151;font-weight:600">
+<option value="introducing-yourself">1. Introducing Yourself</option>
+<option value="daily-conversation">2. Daily Conversation</option>
+<option value="family">3. Family & Friends</option>
+<option value="work">4. Work & School</option>
+<option value="shopping">5. Shopping</option>
+<option value="travel">6. Travel</option>
+<option value="food">7. Food & Restaurants</option>
+<option value="health-wellbeing">8. Health & Wellbeing</option>
+<option value="job-interview">9. Job Interview</option>
+<option value="real-life">10. Real-life Conversation</option>
+</select>
+<div id="lessonInfo" style="font-size:12px;color:#6b7280;line-height:1.45;margin-top:9px"></div>
+</div>
 <div class="progress"><div class="progress-row"><span>Speaking progress</span><b>45%</b></div><div class="bar"><span></span></div></div>
 </aside>
 <section class="practice">
-<div class="practice-title">Speaking Practice</div>
+<div class="practice-title">Speaking Practice</div><div id="lessonBadge" style="margin-top:7px;font-size:12px;color:#4f46e5;font-weight:800">Lesson 1 • Introducing Yourself</div>
 <h2 class="main-title">Let's speak English!</h2>
 <p class="description">Listen to the tutor, speak naturally, and keep the conversation going. Your AI tutor adapts its follow-up questions to what you say.</p>
 <div class="topic">
 <button class="active" onclick="setTopic('Daily Life',this)">Daily Life</button><button onclick="setTopic('Travel',this)">Travel</button><button onclick="setTopic('Work',this)">Work</button><button onclick="setTopic('Hobbies',this)">Hobbies</button>
+</div>
+
+<div id="lessonProgressBox" style="width:min(650px,100%);margin:-12px 0 20px;text-align:left">
+<div style="display:flex;justify-content:space-between;font-size:11px;color:#6b7280;margin-bottom:6px"><span id="lessonProgressText">Lesson progress</span><span id="lessonProgressPercent">0%</span></div>
+<div class="bar"><span id="lessonProgressBar" style="width:0%"></span></div>
 </div>
 <div class="prompt"><div class="prompt-label" id="topicLabel">Daily Life</div><div id="turnLabel" style="font-size:11px;color:#6b7280;margin-top:5px">Conversation turn 1</div><div class="question" id="question">What did you do today?</div><div class="hint">Try to answer in 1–3 complete sentences.</div></div>
 <div class="mic-wrap"><button class="mic" id="mic" onclick="startSpeaking()" aria-label="Start speaking">🎙️</button></div>
@@ -82,7 +104,7 @@ h2.main-title{font-size:30px;margin:8px 0 5px}.description{max-width:560px;color
 </div>
 <div class="controls">
 <button class="control" onclick="speakQuestion()">🔊 Hear Question</button>
-<button class="control primary" onclick="nextQuestion()">Next Question →</button><button class="control" onclick="toggleProgress()">📈 Progress</button>
+<button class="control primary" onclick="nextQuestion()">Next Question →</button><button class="control" onclick="completeLesson()">✓ Complete Lesson</button><button class="control" onclick="toggleProgress()">📈 Progress</button>
 </div>
 <div class="controls" style="margin-top:9px">
 <button class="control" id="replayBtn" onclick="replayTutor()" style="display:none">🔁 Hear Feedback</button>
@@ -103,7 +125,7 @@ h2.main-title{font-size:30px;margin:8px 0 5px}.description{max-width:560px;color
     <div class="metric"><b id="avgStat">--</b><span>Avg. Score</span></div>
     <div class="metric"><b id="fluencyStat">--</b><span>Fluency</span></div>
     <div class="metric"><b id="grammarStat">--</b><span>Grammar</span></div>
-    <div class="metric"><b id="vocabStat">--</b><span>Vocabulary</span></div>
+    <div class="metric"><b id="vocabStat">--</b><span>Vocabulary</span></div><div class="metric"><b id="lessonsStat">0</b><span>Lessons Done</span></div>
   </div>
   <div id="progressAdvice" class="correction" style="display:none;background:#eef2ff;border-color:#c7d2fe"></div>
 </section>
@@ -130,8 +152,9 @@ function setTopic(t,btn){
 }
 function nextQuestion(){
  currentSessionId=null;
- index=(index+1)%questions[topic].length;turn=1;conversation=[];
- q.textContent=questions[topic][index];updateTurn();hideResult();speakQuestion();
+ const lesson=currentLesson();
+ index=(index+1)%lesson.questions.length;turn=1;conversation=[];
+ q.textContent=lesson.questions[index];updateTurn();hideResult();speakQuestion();
 }
 function speakQuestion(){
  if("speechSynthesis"in window){
@@ -180,7 +203,7 @@ async function analyzeAnswer(text){
  const response=await fetch("/api/conversation",{
   method:"POST",headers:{"Content-Type":"application/json"},
   body:JSON.stringify({
-   answer:text,question:q.textContent,level:document.querySelector(".level button.active")?.textContent||"Beginner",
+   answer:text,question:q.textContent,lesson:currentLesson().title,level:document.querySelector(".level button.active")?.textContent||"Beginner",
    topic,turn,history:conversation.slice(-6)
   })
  });
@@ -233,7 +256,7 @@ async function continueConversation(){
    method:"POST",headers:{"Content-Type":"application/json"},
    body:JSON.stringify({
     topic,level:document.querySelector(".level button.active")?.textContent||"Beginner",
-    currentQuestion:q.textContent,history:conversation.slice(-8),turn
+    currentQuestion:q.textContent,lesson:currentLesson().title,history:conversation.slice(-8),turn
    })
   });
   if(!response.ok)throw new Error("next question failed");
@@ -249,6 +272,56 @@ async function continueConversation(){
   status.textContent="I couldn't create a follow-up question. Please try again.";
   document.getElementById("instruction").textContent="Tap Continue Speaking again";
  }
+}
+
+
+const LESSONS={
+ "introducing-yourself":{title:"Introducing Yourself",level:"Beginner",topic:"Daily Life",description:"Introduce yourself, talk about where you are from, and share simple information about yourself.",questions:["What is your name and where are you from?","What do you like to do in your free time?","Tell me one interesting thing about yourself."]},
+ "daily-conversation":{title:"Daily Conversation",level:"Beginner",topic:"Daily Life",description:"Practice useful everyday English for routines, plans, and simple conversations.",questions:["What is your usual morning routine?","What did you do today?","What are you planning to do tomorrow?"]},
+ "family":{title:"Family & Friends",level:"Beginner",topic:"Daily Life",description:"Talk naturally about family members, friends, and relationships.",questions:["Can you tell me about your family?","What do you like doing with your friends?","Who is someone you admire and why?"]},
+ "work":{title:"Work & School",level:"Elementary",topic:"Work",description:"Practice talking about responsibilities, schedules, studies, and workplace situations.",questions:["What do you do at work or school?","What do you enjoy most about it?","Describe a typical day for you."]},
+ "shopping":{title:"Shopping",level:"Elementary",topic:"Daily Life",description:"Practice asking for products, prices, sizes, preferences, and making choices.",questions:["What do you usually buy when you go shopping?","How do you decide whether something is a good value?","Describe something you bought recently."]},
+ "travel":{title:"Travel",level:"Elementary",topic:"Travel",description:"Practice travel plans, destinations, transportation, and experiences.",questions:["Where would you like to travel?","How would you prepare for a trip?","Tell me about a memorable place you have visited."]},
+ "food":{title:"Food & Restaurants",level:"Elementary",topic:"Hobbies",description:"Talk about food preferences and practice ordering and discussing meals.",questions:["What is your favorite food?","What do you usually order at a restaurant?","Describe a meal you really enjoyed."]},
+ "health-wellbeing":{title:"Health & Wellbeing",level:"Intermediate",topic:"Daily Life",description:"Practice everyday conversations about healthy routines, exercise, sleep, and wellbeing.",questions:["What do you do to stay healthy?","How important is regular exercise to you?","What healthy habit would you like to develop?"]},
+ "job-interview":{title:"Job Interview",level:"Advanced",topic:"Work",description:"Practice answering common interview questions clearly, confidently, and professionally.",questions:["Tell me about yourself.","What are your main strengths?","Why are you interested in this position?"]},
+ "real-life":{title:"Real-life Conversation",level:"Advanced",topic:"Daily Life",description:"Have flexible conversations about everyday situations and express opinions naturally.",questions:["What is something interesting happening in your community?","What is an issue you think people should talk about more?","Tell me about something you would like to improve in your life or community."]}
+};
+let currentLessonId="introducing-yourself";
+function currentLesson(){return LESSONS[currentLessonId]}
+function selectLesson(id){
+ if(!LESSONS[id])return;
+ currentLessonId=id;
+ const lesson=LESSONS[id];
+ topic=lesson.topic; index=0; turn=1; conversation=[]; currentSessionId=null;
+ document.getElementById("lessonSelect").value=id;
+ document.getElementById("lessonInfo").textContent=lesson.description+" Recommended level: "+lesson.level+".";
+ document.getElementById("lessonBadge").textContent="Lesson • "+lesson.title;
+ q.textContent=lesson.questions[0]; label.textContent=lesson.topic; updateTurn();
+ document.querySelectorAll(".topic button").forEach(b=>b.classList.toggle("active",b.textContent===lesson.topic));
+ hideResult(); updateLessonProgress();
+}
+function lessonAnswers(){
+ const p=getProgress();
+ return (p.answers||[]).filter(a=>a.lessonId===currentLessonId);
+}
+function updateLessonProgress(){
+ const lesson=currentLesson(), total=lesson.questions.length, answered=lessonAnswers().length;
+ const percent=Math.min(100,Math.round((answered/total)*100));
+ document.getElementById("lessonProgressText").textContent=lesson.title+" • "+Math.min(answered,total)+" of "+total+" practice answers";
+ document.getElementById("lessonProgressPercent").textContent=percent+"%";
+ document.getElementById("lessonProgressBar").style.width=percent+"%";
+}
+function completeLesson(){
+ const p=getProgress(), existing=p.completedLessons||[];
+ if(!existing.includes(currentLessonId))existing.push(currentLessonId);
+ p.completedLessons=existing;saveProgress(p);updateLessonProgress();
+ status.textContent="✓ Lesson completed. Great work!";
+ document.getElementById("instruction").textContent="Choose another lesson or keep practicing.";
+ refreshProgress();
+}
+function startLessonSession(){
+ currentSessionId=null;
 }
 
 const PROGRESS_KEY="english_ai_tutor_progress_v1";
@@ -273,6 +346,8 @@ function recordAnswer(a){
  let s=p.sessions.find(x=>x.id===currentSessionId);
  if(!s){currentSessionId=startProgressSession();s=getProgress().sessions.find(x=>x.id===currentSessionId)}
  const record={
+  lessonId:currentLessonId,
+  lessonTitle:currentLesson().title,
   time:new Date().toISOString(),topic,level:s.level,question:q.textContent,
   answer:document.getElementById("transcript").textContent,
   overall:Number(a.overall)||0,fluency:Number(a.fluency)||0,grammar:Number(a.grammar)||0,
@@ -283,6 +358,7 @@ function recordAnswer(a){
  p.answers.push(record);
  if(p.answers.length>300)p.answers=p.answers.slice(-300);
  saveProgress(p);
+ updateLessonProgress();
 }
 function progressSummary(){
  const p=getProgress(), a=p.answers||[];
@@ -320,6 +396,7 @@ function resetProgress(){
  }
 }
 
+selectLesson("introducing-yourself");
 document.querySelectorAll(".level button").forEach(b=>b.onclick=()=>{document.querySelectorAll(".level button").forEach(x=>x.classList.remove("active"));b.classList.add("active")});
 </script>
 </body>
