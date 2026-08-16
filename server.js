@@ -8,8 +8,15 @@ const port=process.env.PORT||3000;
 app.use(express.json({limit:"128kb"}));
 app.use(express.static("."));
 
-if(!process.env.OPENAI_API_KEY) console.warn("WARNING: OPENAI_API_KEY is not configured.");
-const client=new OpenAI({apiKey:process.env.OPENAI_API_KEY});
+if(!process.env.OPENROUTER_API_KEY) console.warn("WARNING: OPENAI_API_KEY is not configured.");
+const client = new OpenAI({
+  apiKey: process.env.OPENROUTER_API_KEY,
+  baseURL: "https://openrouter.ai/api/v1",
+  defaultHeaders: {
+    "HTTP-Referer": process.env.OPENROUTER_SITE_URL || "http://localhost:3000",
+    "X-OpenRouter-Title": process.env.OPENROUTER_SITE_NAME || "English AI Tutor"
+  }
+});
 
 const evaluationPrompt=`
 You are an expert English speaking tutor and language coach.
@@ -59,11 +66,11 @@ function historyText(history){
  return Array.isArray(history)?history.slice(-8).map(x=>`${x.role}: ${x.text}`).join("\n"):"";
 }
 
-app.post("/api/conversation",async(req,res)=>{
+\napp.get("/api/health",(req,res)=>{\n  res.json({ok:true,provider:"openrouter",configured:Boolean(process.env.OPENROUTER_API_KEY),model:process.env.OPENROUTER_MODEL||"openrouter/free"});\n});\n\napp.post("/api/conversation",async(req,res)=>{
  try{
   const {answer,question,lesson="",level="Beginner",topic="Daily Life",turn=1,history=[],speechConfidence=null}=req.body||{};
   if(!answer||typeof answer!=="string")return res.status(400).json({error:"Missing spoken answer."});
-  if(!process.env.OPENAI_API_KEY)return res.status(503).json({error:"OPENAI_API_KEY is not configured."});
+  if(!process.env.OPENROUTER_API_KEY)return res.status(503).json({error:"OPENAI_API_KEY is not configured."});
 
   const confidenceLine=speechConfidence==null?"Speech confidence: unavailable":`Speech recognition confidence: ${Number(speechConfidence).toFixed(2)}`;
   const input=`Learner level: ${level}
@@ -116,7 +123,7 @@ app.post("/api/pronunciation",async(req,res)=>{
  try{
   const {target,spoken,confidence=null,level="Beginner"}=req.body||{};
   if(!target||!spoken)return res.status(400).json({error:"Missing pronunciation text."});
-  if(!process.env.OPENAI_API_KEY)return res.status(503).json({error:"OPENAI_API_KEY is not configured."});
+  if(!process.env.OPENROUTER_API_KEY)return res.status(503).json({error:"OPENAI_API_KEY is not configured."});
   const input=`Learner level: ${level}
 Target sentence: ${target}
 Speech recognition transcript: ${spoken}
@@ -139,7 +146,7 @@ Scores 0-100. Be cautious: transcript evidence cannot prove exact phoneme pronun
 app.post("/api/next-question",async(req,res)=>{
  try{
   const {topic="Daily Life",lesson="",level="Beginner",currentQuestion="",history=[],turn=1}=req.body||{};
-  if(!process.env.OPENAI_API_KEY)return res.status(503).json({error:"OPENAI_API_KEY is not configured."});
+  if(!process.env.OPENROUTER_API_KEY)return res.status(503).json({error:"OPENAI_API_KEY is not configured."});
 
   const input=`Lesson: ${lesson}
 Topic: ${topic}

@@ -1,40 +1,60 @@
-# English AI Tutor — Step 4F: Mobile App Preparation
+# English AI Tutor — OpenRouter Integration
 
-Step 4F prepares the speaking-first English AI Tutor for real mobile packaging.
+This version routes the tutor's server-side AI requests through OpenRouter.
 
-Included:
-- Responsive mobile viewport
-- Safe-area support for modern phones
-- Touch-friendly controls
-- PWA manifest
-- Service worker/offline app shell
-- 192px/512px app icons
-- Capacitor configuration
-- Android/iOS packaging instructions
-- Existing Steps 4A–4E functionality preserved
+## Environment
 
-## Architecture
+```text
+OPENROUTER_API_KEY=your_openrouter_key_here
+OPENROUTER_MODEL=openrouter/free
+OPENROUTER_SITE_URL=https://your-domain.example
+OPENROUTER_SITE_NAME=English AI Tutor
+```
 
-Mobile app UI → HTTPS API → AI model
+**Never put the real key in `index.html`, a mobile app, GitHub, or other client-side code.**
 
-The API key stays on the server.
+## How it works
 
-## Web
+```text
+Browser / Mobile App
+        ↓
+     server.js
+        ↓
+ OpenRouter API
+        ↓
+     AI model
+```
+
+The server uses the OpenAI JavaScript SDK pointed at OpenRouter's OpenAI-compatible base URL.
+
+## Local test
 
 ```bash
 npm install
+cp .env.example .env
+# Edit .env and add your real OpenRouter key
 npm start
 ```
 
-## Mobile packaging
+Then test:
+- AI conversation
+- English evaluation
+- Dynamic follow-up questions
+- Pronunciation analysis
 
-```bash
-npm install
-npx cap add android
-npx cap add ios
-npx cap sync
+## Render
+
+In the Render service Environment settings, add:
+
+```text
+OPENROUTER_API_KEY=your_real_key
+OPENROUTER_MODEL=openrouter/free
 ```
 
-Then open the native project with Android Studio or Xcode.
+Do not commit `.env` or the real key to GitHub.
 
-See `mobile-build.md` for details.
+## Model switching
+
+Change only `OPENROUTER_MODEL` to another OpenRouter model slug when desired. OpenRouter exposes its current model catalog through `/api/v1/models`.
+
+The free router is useful for initial testing, but model availability and free-model limits can change. For production, choose a specific model after testing quality, latency, and cost.
