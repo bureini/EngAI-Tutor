@@ -237,70 +237,72 @@ async function analyzeAnswer(text){
  return await response.json();
 }
 async function startSpeaking(){
- const Recognition=window.SpeechRecognition||window.webkitSpeechRecognition;
- if(!Recognition){status.textContent="Speech recognition is not supported in this browser. Please use Chrome or another supported browser.";return}
- speechSynthesis?.cancel();
- const r=new Recognition();r.lang="en-US";r.interimResults=false;r.maxAlternatives=1;
- mic.classList.add("listening");document.getElementById("instruction").textContent="Listening… speak now";status.textContent="I'm listening to you.";
- r.onresult=async e=>{
-  const text=e.results[0][0].transcript;
-  document.getElementById("transcript").textContent=text;
-  conversation.push({role:"learner",text});
-  status.textContent="AI tutor is thinking about your answer…";
-  document.getElementById("instruction").textContent="Creating your personalized response…";
-  try{
-   const a=await analyzeAnswer(text);
-   conversation.push({role:"tutor",text:a.voiceResponse||a.feedback});
-   renderConversation(a);
-   lastTutorText=buildTutorSpeech(a);
-   document.getElementById("replayBtn").style.display="inline-block";
-   document.getElementById("continueBtn").style.display="inline-block";
-   document.getElementById("instruction").textContent="Your tutor is responding…";
-   speakText(lastTutorText,()=>{
-    status.textContent="Your turn. Tap the microphone and continue the conversation.";
-    document.getElementById("instruction").textContent="Tap the microphone to speak";
-   });
-  }catch(err){
-   status.textContent="The AI tutor could not continue the conversation. Check that the server and API key are configured.";
-   document.getElementById("instruction").textContent="Tap the microphone to try again";
-  }
- };
- r.onerror=e=>{status.textContent=e.error==="not-allowed"?"Microphone permission was denied. Please allow microphone access.":"I couldn't hear you clearly. Please try again."};
- r.onend=()=>mic.classList.remove("listening");
- r.start();
+  const Recognition=window.SpeechRecognition||window.webkitSpeechRecognition;
+  if(!Recognition){status.textContent="Speech recognition is not supported in this browser. Please use Chrome or another supported browser.";return}
+  speechSynthesis?.cancel();
+  const r=new Recognition();r.lang="en-US";r.interimResults=false;r.maxAlternatives=1;
+  mic.classList.add("listening");document.getElementById("instruction").textContent="Listening… speak now";status.textContent="I'm listening to you.";
+  r.onresult=async e=>{
+   const text=e.results[0][0].transcript;
+   document.getElementById("transcript").textContent=text;
+   conversation.push({role:"learner",text});
+   status.textContent="AI tutor is thinking about your answer…";
+   document.getElementById("instruction").textContent="Creating your personalized response…";
+   try{
+    const a=await analyzeAnswer(text);
+    conversation.push({role:"tutor",text:a.voiceResponse||a.feedback});
+    renderConversation(a);
+    recordAnswer(a);
+    lastTutorText=buildTutorSpeech(a);
+    document.getElementById("replayBtn").style.display="inline-block";
+    document.getElementById("continueBtn").style.display="none";
+    document.getElementById("instruction").textContent="Your tutor is responding…";
+    speakText(lastTutorText,async()=>{ await continueConversation(); });
+   }catch(err){
+    console.error("Conversation error:",err);
+    status.textContent="The AI tutor could not continue the conversation. Check that the server and API key are configured.";
+    document.getElementById("instruction").textContent="Tap the microphone to try again";
+   }
+  };
+  r.onerror=e=>{mic.classList.remove("listening");status.textContent=e.error==="not-allowed"?"Microphone permission was denied. Please allow microphone access.":"I couldn't hear you clearly. Please try again."};
+  r.onend=()=>mic.classList.remove("listening");
+  r.start();
 }
 function replayTutor(){if(lastTutorText)speakText(lastTutorText,()=>{status.textContent="Your turn. Tap the microphone and continue the conversation."})}
 async function continueConversation(){
- turn++;
- updateTurn();
- document.getElementById("replayBtn").style.display="none";
- document.getElementById("continueBtn").style.display="none";
- status.textContent="AI tutor is preparing the next question…";
- document.getElementById("instruction").textContent="Preparing follow-up…";
- try{
-  const response=await fetch("/api/next-question",{
-   method:"POST",headers:{"Content-Type":"application/json"},
-   body:JSON.stringify({
-    topic,level:document.querySelector(".level button.active")?.textContent||"Beginner",
-    currentQuestion:q.textContent,lesson:currentLesson().title,history:conversation.slice(-8),turn
-   })
-  });
-  if(!response.ok)throw new Error("next question failed");
-  const data=await response.json();
-  q.textContent=data.question;
-  label.textContent=topic;
+  turn++;
   updateTurn();
-  document.getElementById("result").style.display="none";
-  status.textContent="Listen to your tutor, then answer.";
-  document.getElementById("instruction").textContent="Tutor is asking a follow-up question…";
-  speakText(data.question,()=>{status.textContent="Your turn. Tap the microphone.";document.getElementById("instruction").textContent="Tap the microphone to speak"});
- }catch(e){
-  status.textContent="I couldn't create a follow-up question. Please try again.";
-  document.getElementById("instruction").textContent="Tap Continue Speaking again";
- }
+  document.getElementById("replayBtn").style.display="none";
+  document.getElementById("continueBtn").style.display="none";
+  status.textContent="AI tutor is preparing the next question…";
+  document.getElementById("instruction").textContent="Preparing follow-up…";
+  const level=document.querySelector(".level button.active")?.textContent||"Beginner";
+  try{
+   const response=await fetch("/api/next-question",{
+    method:"POST",headers:{"Content-Type":"application/json"},
+    body:JSON.stringify({topic,level,currentQuestion:q.textContent,lesson:currentLesson().title,history:conversation.slice(-8),turn})
+   });
+   const data=await response.json().catch(()=>({}));
+   if(!response.ok)throw new Error(data.error||"next question failed");
+   if(!data.question)throw new Error("No follow-up question returned");
+   q.textContent=data.question;
+   label.textContent=topic;
+   updateTurn();
+   document.getElementById("result").style.display="none";
+   conversation.push({role:"tutor",text:data.question});
+   status.textContent="Listen to your tutor…";
+   document.getElementById("instruction").textContent="Tutor is asking a follow-up question…";
+   speakText(data.question,()=>{
+     status.textContent="Your turn. Tap the microphone.";
+     document.getElementById("instruction").textContent="Tap the microphone to speak";
+   });
+  }catch(e){
+   console.error("Follow-up question error:",e);
+   status.textContent="I couldn't create a follow-up question. Tap Continue Speaking to retry.";
+   document.getElementById("instruction").textContent="Tap Continue Speaking to retry";
+   document.getElementById("continueBtn").style.display="inline-block";
+  }
 }
-
-
 
 const PRON_TARGETS=[
 "I would like to improve my English speaking skills.",
